@@ -1,46 +1,48 @@
+import os
+from dotenv import load_dotenv
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
-from tools import web_search, scrape_url 
-from dotenv import load_dotenv
+
+from tools import web_search, scrape_url
 
 load_dotenv()
 
-# Model setup 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
-# 1st Agent - Search Agent
+def get_llm():
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is missing!")
+    return ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=api_key)
+
+
 def build_search_agent():
     tools = [web_search]
-    
-    # Tool-calling agents require an agent_scratchpad placeholder for history
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a research assistant tasked with searching for reliable information."),
         ("human", "{messages}"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ])
-    
-    agent = create_tool_calling_agent(llm, tools, prompt)
+    agent = create_tool_calling_agent(get_llm(), tools, prompt)
     return AgentExecutor(agent=agent, tools=tools, verbose=False)
 
-# 2nd Agent - Reader Agent
+
 def build_reader_agent():
     tools = [scrape_url]
-    
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a web scraper assistant. You pick the best URL and scrape it for deep content."),
         ("human", "{messages}"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ])
-    
-    agent = create_tool_calling_agent(llm, tools, prompt)
+    agent = create_tool_calling_agent(get_llm(), tools, prompt)
     return AgentExecutor(agent=agent, tools=tools, verbose=False)
 
-# Writer Chain 
-writer_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are an expert research writer. Write clear, structured and insightful reports."),
-    ("human", """Write a detailed research report on the topic below.
+
+def run_writer_chain(inputs: dict) -> str:
+    writer_prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are an expert research writer. Write clear, structured and insightful reports."),
+        ("human", """Write a detailed research report on the topic below.
 
 Topic: {topic}
 
@@ -54,14 +56,15 @@ Structure the report as:
 - Sources (list all URLs found in the research)
 
 Be detailed, factual and professional."""),
-])
+    ])
+    chain = writer_prompt | get_llm() | StrOutputParser()
+    return chain.invoke(inputs)
 
-writer_chain = writer_prompt | llm | StrOutputParser()
 
-# Critic Chain 
-critic_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a sharp and constructive research critic. Be honest and specific."),
-    ("human", """Review the research report below and evaluate it strictly.
+def run_critic_chain(inputs: dict) -> str:
+    critic_prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a sharp and constructive research critic. Be honest and specific."),
+        ("human", """Review the research report below and evaluate it strictly.
 
 Report:
 {report}
@@ -80,6 +83,6 @@ Areas to Improve:
 
 One line verdict:
 ..."""),
-])
-
-critic_chain = critic_prompt | llm | StrOutputParser()
+    ])
+    chain = critic_prompt | get_llm() | StrOutputParser()
+    return chain.invoke(inputs)

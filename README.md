@@ -1,18 +1,41 @@
-# Multi-Agent AI System
+# Autonomous Multi-Agent Research System
 
-A repository for a multi-agent artificial intelligence system.
+A Streamlit research assistant that coordinates search, page reading, report writing, and critic review through a multi-step agent pipeline.
 
-## Overview
-The repository name suggests a system built around multiple AI agents. Agent responsibilities, orchestration, model providers, tools, memory, and the target use case should be verified from the implementation before being described as implemented features.
+## Workflow
 
-## Getting started
-1. Clone this repository.
-2. Review the source code and dependency manifest.
-3. Configure required API credentials in environment variables; do not commit secrets.
-4. Install dependencies and run the documented entry point.
+1. Search agent gathers recent information about a user-supplied topic.
+2. Reader agent selects a relevant result and extracts deeper content.
+3. Writer chain drafts a report from the gathered material.
+4. Critic chain reviews the generated report and returns feedback.
 
-## Architecture documentation
-A complete project guide should describe agent roles, control flow, tool permissions, error handling, evaluation, and deployment configuration.
+The Streamlit interface presents the report, critic feedback, search results, and scraped content in separate tabs.
 
-## Author
-**Atika Akhtar** · [GitHub](https://github.com/atikaakhtar101110-debug) · [LinkedIn](https://www.linkedin.com/in/atika-akhtar-367045261/)
+## Run locally
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+## Environment
+
+Configure the API credentials required by the agent/provider implementations in your local environment or hosting dashboard. Common configuration includes:
+
+- `OPENAI_API_KEY`
+- `TAVILY_API_KEY` (if the search implementation uses Tavily)
+
+Never commit real API keys. Use a local `.env` file only if the project loads it, and keep it out of version control.
+
+## Deploy on Render
+
+The repository includes a `render.yaml` blueprint for a Python Streamlit web service. Add the required secrets in the Render dashboard before using the app.
+
+## Notes
+
+- Search and scraped-page content depend on external providers and network availability.
+- Review generated reports and source material before relying on them.
+- Add tests for agent outputs, provider failures, and malformed search results before production use.
